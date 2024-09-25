@@ -27,7 +27,7 @@ void play(int freq) {
     
     for (i=0 ; i<SAMP; ) {
 	p = period;		/* Period for this iteration */
-	if (err >= freq) {
+	if (err*2 >= freq) {
 	    /* Add an extra sample if we have accumulated enough error */
 	    p += 1;
 	    err -= freq;
