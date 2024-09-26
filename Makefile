@@ -1,5 +1,6 @@
 audioclock:	audioclock.c
-	gcc -o audioclock -g -Wall audioclock.c -lm
+	gcc -o audioclock -g -Wall audioclock.c -lpulse-simple -lm
 
-test:	audioclock
-	./audioclock | pacat --rate=48000 --channels=1 --raw
+clean:
+	-rm audioclock *.o
+
