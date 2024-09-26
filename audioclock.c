@@ -9,60 +9,61 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <math.h>
+#include <time.h>
+#include <sys/time.h>
 
 #define SAMP 48000		/* Sample rate */
-#define HI 16383		/* Amplitude of high portion of wave */
-#define LO -16384		/* Amplitude of low portion of wave */
-
 int16_t buf[SAMP];		/* Buffer holding 1 second of audio */
 
-/* Generate a 100 second tone of freq and output it to stdout */
-void play(int64_t freq) {
-    int64_t i,j, period, rem, err,p;
-    int cnt=0; 			/* Actual frequency count */
+struct timezone utc = {0,0};
+
+/* Play 1 second of sine tone */
+void sinwav(double freq) {
+    int i;
+    double f;
+
+    fprintf(stderr,"freq=%0.2f\n", freq);
     
-    period = SAMP * 50 / freq;	/* Number of samples per half-cycle */
-    rem = (SAMP * 50) % freq;	/* Number of partial samples lost in the divide */
-    err = 0;			/* Accumulated error */
-    
-    for (i=0;i < SAMP;) {
-	p = period;		/* Period for this iteration */
-	if (err*2 >= freq) {
-	    /* Add an extra sample if we have accumulated enough error */
-	    p += 1;
-	    err -= freq;
-	}
-	cnt++;
-	/* Do the high part */
-	for (j=0;j<p && i<SAMP;j++) {
-	    buf[i++] = HI;
-	}
-	/* And the low part */
-	for (j=0;j<p && i<SAMP;j++) {
-	    buf[i++] = LO;
-	}
-	
-	err += rem;	/* Accumulate the error */
+    f = 2.0*M_PI*freq/(double)SAMP;
+    for (i=0;i<SAMP;i++) {
+	buf[i] = cos(f*(double)i) * 32767;
     }
 
-    /* Write diagnostic data to console */
-//    fprintf(stderr, "freq=%d, period=%d, rem=%d ", freq, period, rem);
-//    fprintf(stderr, "cnt=%d\n", cnt);
-
-    /* Emit sample data to stdout */
     fwrite(buf, sizeof(buf), 1, stdout);
 }
 
-int main(int argc, char**argv) {
-    int h,m,s;
-
-    /* Simulate an HHMM clock going from 0400 to 2359 */
-    for (h=1;h<24;h++) {
-	for (m=0;m<60;m++) {
-	    for (s=0;s<60;s++) {
-		fprintf(stderr,"%02d:%02d:%02d\n", h, m, s);
-		play((h*100 + m)*100 + s);
-	    }
-	}
+int hour_to_12(int hour) {
+    if (hour > 12) {
+	return hour - 12;
+    } else if (hour == 0) {
+	return 12;
+    } else {
+	return hour;
     }
 }
+
+int main(int argc, char** argv) {
+    int sleep_time;
+    double freq;
+    struct timeval now;
+    struct tm* tm;
+
+    for (;;) {
+	/* Sleep until next second */
+	gettimeofday(&now, &utc);
+	sleep_time = (1000000 - now.tv_usec);
+	usleep(sleep_time);
+
+	/* Emit 1 second of tone */
+	now.tv_sec++;
+	tm = localtime(&now.tv_sec);
+	freq = hour_to_12(tm->tm_hour) * 100 + tm->tm_min + tm->tm_sec/100.0;
+	sinwav(freq);
+    }
+}
+
+	
+	
+	
+	
